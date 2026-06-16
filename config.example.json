@@ -1,0 +1,15 @@
+{
+  "source": {
+    "type": "xtream",
+    "server": "http://your-provider-host:port",
+    "username": "YOUR_USERNAME",
+    "password": "YOUR_PASSWORD"
+  },
+  "player_path": "",
+  "user_agent": "",
+  "single_stream": true,
+  "use_live_url": true,
+  "live_format": "ts",
+  "disabled_groups": [],
+  "favourites": []
+}

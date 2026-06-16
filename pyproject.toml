@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "open-iptv"
+version = "1.0.0"
+description = "A fast, modern desktop IPTV browser (tkinter) with live EPG and Xtream support."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = ["Pillow>=9.1"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+open-iptv = "app:main"
+open-iptv-epg-doctor = "epg_doctor:main"
+
+[project.urls]
+Homepage = "https://github.com/Jordan-Hn/OPEN-IPTV"
+
+[tool.setuptools]
+py-modules = [
+    "app", "iptv_launcher", "catalog", "epg_guide", "epg_doctor", "images",
+    "net", "theme", "widgets", "lock", "player", "config_store",
+]
+packages = ["views"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
