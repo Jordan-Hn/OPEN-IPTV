@@ -1,0 +1,48 @@
+# Your settings and credentials. Copy config.example.json to config.json.
+config.json
+
+# Regenerable caches, rebuilt from the source / provider guide
+iptv_catalog.db
+iptv_catalog.db-wal
+iptv_catalog.db-shm
+iptv_catalog.db.building
+iptv_catalog.db.m3u
+iptv_epg.db
+iptv_epg.db-wal
+iptv_epg.db-shm
+iptv_epg.db.xmltv
+.cache/
+
+# Runtime
+iptv_launcher.lock
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Large playlist (personal, provider-specific, contains credentials in URLs)
+IPTV.m3u
+
+# Bundled media player. Users install their own (VLC etc.); see README
+VLC/
+
+# Internal dev notes, kept local and out of the public repo
+PROJECT_NOTES.md
+REFACTOR_PLAN.md
+
+# Local demo/test playlist generator, kept off the public repo
+mock_provider.py
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Python build artifacts
+*.egg-info/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+.python-version

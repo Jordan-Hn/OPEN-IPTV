@@ -1,0 +1,4 @@
+# IPTV Stream Browser dependencies
+# Everything else (tkinter, sqlite3, urllib, json, base64) ships with Python.
+# Note: the old `requests` dependency was removed in favour of stdlib urllib.
+Pillow>=9.1
