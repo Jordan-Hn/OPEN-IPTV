@@ -8,8 +8,11 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest (26.04) has no Python 3.9 build, and 3.9 is still
+    # the minimum the project supports.
+    runs-on: ubuntu-24.04
     strategy:
+      fail-fast: false  # report every Python version, even if one fails
       matrix:
         python-version: ["3.9", "3.11", "3.12"]
     steps:
