@@ -9,7 +9,7 @@ import tkinter as tk
 from PIL import Image, ImageDraw
 
 from iptv.ui.theme import (ACCENT, ACCENT_HOV, ACCENT_INK, BORDER, BORDER_SOFT, BG,
-                   FONT_BODY, FONT_BTN, FONT_BTN_LG, FONT_SMALL, HOVER, LOGO_BG,
+                   FONT_BODY, FONT_BTN, FONT_BTN_LG, FONT_SMALL, HOVER, LIVE, LOGO_BG,
                    LOGO_SIZE, ROW_HOVER, SURFACE_2, TEXT, TEXT_FAINT, TEXT_MUTED, rgb)
 
 
@@ -217,6 +217,64 @@ def settings_entry(parent, label, value="", show=None, browse=None):
     if browse:
         ghost_button(wrap, "Browse", browse).pack(side=tk.RIGHT, padx=3, pady=2)
     return entry
+
+
+def search_box(parent, on_submit, value="", placeholder="Search channels", width=18):
+    """A compact search field for the header bar.
+
+    Enter, or a click on the magnifier, hands the typed keyword to ``on_submit``.
+    An empty box flashes its border rather than searching for everything. Returns
+    ``(wrap, entry)`` so the caller packs the wrap and can focus the entry.
+    """
+    wrap = tk.Frame(parent, bg=SURFACE_2, highlightthickness=1,
+                    highlightbackground=BORDER, highlightcolor=BORDER)
+    glyph = tk.Label(wrap, text="⌕", font=("Segoe UI", 14), fg=TEXT_FAINT,
+                     bg=SURFACE_2, cursor="hand2")
+    glyph.pack(side=tk.LEFT, padx=(9, 0))
+    entry = tk.Entry(wrap, font=FONT_BODY, bg=SURFACE_2, fg=TEXT, relief="flat",
+                     bd=0, insertbackground=ACCENT, width=width)
+    entry.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=6, padx=(6, 10), pady=2)
+
+    # Tk entries have no native placeholder, so track whether the grey prompt text
+    # is showing and treat that as empty.
+    showing_prompt = [not value]
+    entry.insert(0, value or placeholder)
+    if not value:
+        entry.config(fg=TEXT_FAINT)
+
+    def focus_in(_=None):
+        if showing_prompt[0]:
+            entry.delete(0, tk.END)
+            entry.config(fg=TEXT)
+            showing_prompt[0] = False
+        wrap.config(highlightbackground=ACCENT)
+
+    def focus_out(_=None):
+        if not entry.get().strip():
+            entry.delete(0, tk.END)
+            entry.insert(0, placeholder)
+            entry.config(fg=TEXT_FAINT)
+            showing_prompt[0] = True
+        wrap.config(highlightbackground=BORDER)
+
+    def submit(_=None):
+        keyword = "" if showing_prompt[0] else entry.get().strip()
+        if not keyword:
+            wrap.config(highlightbackground=LIVE)
+            wrap.after(250, lambda: wrap.config(
+                highlightbackground=ACCENT if entry is entry.focus_get() else BORDER))
+            entry.focus_set()
+            return "break"
+        on_submit(keyword)
+        return "break"
+
+    entry.bind("<FocusIn>", focus_in)
+    entry.bind("<FocusOut>", focus_out)
+    entry.bind("<Return>", submit)
+    glyph.bind("<Button-1>", submit)
+    glyph.bind("<Enter>", lambda e: glyph.config(fg=ACCENT))
+    glyph.bind("<Leave>", lambda e: glyph.config(fg=TEXT_FAINT))
+    return wrap, entry
 
 
 def make_placeholder(size=LOGO_SIZE, radius=14):

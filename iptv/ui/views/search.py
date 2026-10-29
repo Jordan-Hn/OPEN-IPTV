@@ -3,52 +3,11 @@ keyword right now per the guide."""
 
 import tkinter as tk
 
-from iptv.ui.theme import (ACCENT, BG, BG_SUNKEN, BORDER, FONT_BODY, FONT_CAPTION,
-                   FONT_H2, FONT_SMALL, LIVE, SURFACE_2, TEXT, TEXT_FAINT, TEXT_MUTED)
-from iptv.ui.widgets import ghost_button, primary_button
+from iptv.ui.theme import (BG_SUNKEN, FONT_CAPTION, FONT_H2, FONT_SMALL, TEXT,
+                   TEXT_FAINT, TEXT_MUTED)
 
 
 class SearchView:
-    def open_search_window(self):
-        win = tk.Toplevel(self.root)
-        win.title("Search Channels")
-        win.configure(bg=BG)
-        win.resizable(False, False)
-        win.transient(self.root)
-        win.grab_set()
-        w, h = 520, 220
-        win.geometry(
-            f"{w}x{h}+{(win.winfo_screenwidth() - w) // 2}+{(win.winfo_screenheight() - h) // 2}")
-
-        frame = tk.Frame(win, bg=BG)
-        frame.pack(fill=tk.BOTH, expand=True, padx=28, pady=28)
-        tk.Label(frame, text="Search Channels", font=FONT_H2, fg=TEXT, bg=BG).pack(anchor="w")
-        tk.Label(frame, text="Find channels by name across your enabled categories.",
-                 font=FONT_SMALL, fg=TEXT_MUTED, bg=BG).pack(anchor="w", pady=(4, 18))
-
-        entry_wrap = tk.Frame(frame, bg=SURFACE_2, highlightthickness=1,
-                              highlightbackground=BORDER, highlightcolor=ACCENT)
-        entry_wrap.pack(fill=tk.X)
-        entry = tk.Entry(entry_wrap, font=FONT_BODY, bg=SURFACE_2, fg=TEXT, relief="flat",
-                         bd=0, insertbackground=ACCENT)
-        entry.pack(fill=tk.X, ipady=9, padx=12, pady=2)
-        entry.focus_set()
-
-        def do_search(_=None):
-            kw = entry.get().strip()
-            if not kw:
-                entry_wrap.config(highlightbackground=LIVE)
-                win.after(250, lambda: entry_wrap.config(highlightbackground=BORDER))
-                return
-            win.destroy()
-            self.show_search_results(kw, 0)
-
-        entry.bind("<Return>", do_search)
-        btns = tk.Frame(frame, bg=BG)
-        btns.pack(anchor="e", pady=(20, 0))
-        ghost_button(btns, "Cancel", win.destroy).pack(side=tk.LEFT, padx=(0, 10))
-        primary_button(btns, "Search", do_search, large=True).pack(side=tk.LEFT)
-
     def show_search_results(self, keyword, page=0):
         gen = self.new_view()
         self.root.title(f"Search: {keyword}")

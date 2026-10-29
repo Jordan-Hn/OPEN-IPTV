@@ -69,3 +69,14 @@ def test_persistence_round_trip(tmp_path):
     assert reloaded.is_favourite_series("Show", "S")
     assert [r["url"] for r in reloaded.history_items()] == ["cu"]
     assert reloaded.get_position("vod")["pos"] == 90
+
+
+def test_track_prefs_are_per_series_and_persist(tmp_path):
+    path = str(tmp_path / "config.json")
+    cfg = Config(path)
+    cfg.save_track_prefs("Show", "TV", {"audio": {"lang": "French"}, "sub": {"off": True}})
+    again = Config(path)
+    again.load()
+    assert again.get_track_prefs("Show", "TV") == {"audio": {"lang": "French"}, "sub": {"off": True}}
+    assert again.get_track_prefs("Show", "Other group") == {}
+    assert again.get_track_prefs("Other show", "TV") == {}

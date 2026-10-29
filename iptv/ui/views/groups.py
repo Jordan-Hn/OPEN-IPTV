@@ -4,7 +4,7 @@ import tkinter as tk
 
 from iptv.ui.theme import (BG_SUNKEN, BORDER, FONT_CAPTION, FONT_CARD, FONT_SMALL,
                    HOVER, SURFACE, TEXT, TEXT_MUTED)
-from iptv.ui.widgets import card_hover, ghost_button, primary_button
+from iptv.ui.widgets import card_hover, ghost_button
 
 
 def _columns_for_width(width):
@@ -60,7 +60,7 @@ class GroupsView:
             w.config(cursor="hand2")
 
     def show_groups(self):
-        gen = self.new_view()
+        gen = self.groups_gen = self.new_view()
         self.root.title("IPTV Stream Browser")
 
         self.clear_header()
@@ -71,8 +71,7 @@ class GroupsView:
         ghost_button(self.header_actions, "Categories", self.open_filter_window).pack(side=tk.LEFT, padx=(0, 10))
         ghost_button(self.header_actions, "Refresh", self.refresh_source).pack(side=tk.LEFT, padx=(0, 10))
         ghost_button(self.header_actions, "Settings",
-                     lambda: self.open_settings(first_run=False)).pack(side=tk.LEFT, padx=(0, 10))
-        primary_button(self.header_actions, "Search", self.open_search_window).pack(side=tk.LEFT)
+                     lambda: self.open_settings(first_run=False)).pack(side=tk.LEFT)
 
         recent = self.config.history_items()[:6]
         if recent:

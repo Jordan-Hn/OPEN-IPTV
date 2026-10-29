@@ -31,6 +31,7 @@ class Config:
         self.favourite_series = {}  # "name\x00grp" -> {name, grp, logo, ep_count}
         self.history = []           # most-recent-first list of played records
         self.positions = {}         # url -> {pos, length, at}, for resume
+        self.track_prefs = {}       # "name\x00grp" -> {audio, sub}, carried across episodes
         self._save_lock = threading.Lock()  # position saves arrive from a poller thread
 
     # dict-like access to the raw settings ---------------------------------- #
@@ -73,6 +74,8 @@ class Config:
                         if isinstance(r, dict) and r.get("url")]
         self.positions = {u: p for u, p in (self.data.get("positions") or {}).items()
                           if isinstance(p, dict) and "pos" in p}
+        self.track_prefs = {k: v for k, v in (self.data.get("track_prefs") or {}).items()
+                            if isinstance(v, dict)}
 
     def save(self):
         with self._save_lock:
@@ -81,6 +84,7 @@ class Config:
             self.data["favourite_series"] = list(self.favourite_series.values())
             self.data["history"] = self.history
             self.data["positions"] = self.positions
+            self.data["track_prefs"] = self.track_prefs
             try:
                 with open(self.path, "w", encoding="utf-8") as f:
                     json.dump(self.data, f, indent=2)
@@ -172,3 +176,13 @@ class Config:
     def clear_position(self, url):
         if self.positions.pop(url, None) is not None:
             self.save()
+
+    # audio / subtitle choices per series ----------------------------------- #
+    def get_track_prefs(self, series, grp=""):
+        return dict(self.track_prefs.get(_series_key(series, grp)) or {})
+
+    def save_track_prefs(self, series, grp, prefs):
+        if not series:
+            return
+        self.track_prefs[_series_key(series, grp)] = prefs
+        self.save()

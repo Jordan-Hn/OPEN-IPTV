@@ -26,7 +26,7 @@ from PIL import ImageTk
 
 from iptv.ui.theme import BG, FONT_SUB, FONT_SMALL, FONT_TITLE, TEXT, TEXT_MUTED, TEXT_FAINT, \
     ACCENT, ACCENT_INK, SURFACE, BG_SUNKEN, BORDER_SOFT
-from iptv.ui.widgets import ghost_button, make_placeholder
+from iptv.ui.widgets import ghost_button, make_placeholder, search_box
 from iptv.ui.views.groups import GroupsView
 from iptv.ui.views.channels import ChannelsView
 from iptv.ui.views.search import SearchView
@@ -120,11 +120,13 @@ class App(GroupsView, ChannelsView, SearchView, FavouritesView, FiltersView,
         self.epg_guide: EpgGuide | None = None
         self.epg_ready = False
         self.epg_refreshing = False
+        self.catalog_refreshing = False
         self.executor = ThreadPoolExecutor(max_workers=WORKERS, thread_name_prefix="iptv")
         self.ui_queue: "queue.Queue" = queue.Queue()
 
         # Navigation / per-view state.
         self.view_gen = 0
+        self.groups_gen = -1    # view generation the categories screen owns
         self.view_images: list = []
         self.live_cards: list = []
         self.name_labels: list = []
@@ -194,11 +196,20 @@ class App(GroupsView, ChannelsView, SearchView, FavouritesView, FiltersView,
         self.header_actions = tk.Frame(header, bg=BG)
         self.header_actions.pack(side=tk.RIGHT)
 
-        content_wrap = tk.Frame(shell, bg=BORDER_SOFT)
-        content_wrap.pack(fill=tk.BOTH, expand=True, padx=28, pady=(0, 0))
-        self.canvas = tk.Canvas(content_wrap, bg=BG_SUNKEN, highlightthickness=0, bd=0)
+        # Search gets its own slim row rather than a spot among the header
+        # buttons: at the 900px minimum window those buttons already fill the
+        # header, and a field wedged in beside them would push it out of view.
+        self.search_row = tk.Frame(shell, bg=BG)
+        search_wrap, self.search_entry = search_box(
+            self.search_row, lambda keyword: self.show_search_results(keyword, 0),
+            placeholder="Search channels by name, or what's broadcasting now", width=1)
+        search_wrap.pack(fill=tk.X)
+
+        self.content_wrap = tk.Frame(shell, bg=BORDER_SOFT)
+        self.content_wrap.pack(fill=tk.BOTH, expand=True, padx=28, pady=(0, 0))
+        self.canvas = tk.Canvas(self.content_wrap, bg=BG_SUNKEN, highlightthickness=0, bd=0)
         self.scrollbar = tk.Scrollbar(
-            content_wrap, orient=tk.VERTICAL, command=self.canvas.yview,
+            self.content_wrap, orient=tk.VERTICAL, command=self.canvas.yview,
             bg=SURFACE, troughcolor=BG_SUNKEN, width=12,
             activebackground=ACCENT, relief="flat", bd=0)
         self.body = tk.Frame(self.canvas, bg=BG_SUNKEN)
@@ -383,19 +394,43 @@ class App(GroupsView, ChannelsView, SearchView, FavouritesView, FiltersView,
             next_btn.config(state="disabled", fg=TEXT_FAINT, cursor="arrow")
         tk.Frame(parent, bg=BG_SUNKEN, height=16).pack()
 
+    # -- search bar --------------------------------------------------------- #
+    def show_search_row(self):
+        """Reveal the search bar. Hidden until there are channels to search."""
+        self.search_row.pack(fill=tk.X, padx=28, pady=(0, 12), before=self.content_wrap)
+
+    def hide_search_row(self):
+        self.search_row.pack_forget()
+
     # -- shortcuts ---------------------------------------------------------- #
     def _shortcut_home(self):
         if self.catalog.total_channels() > 0:
             self.show_groups()
 
     def _shortcut_search(self):
-        if self.catalog.total_channels() > 0:
-            self.open_search_window()
+        """Ctrl+F jumps to the search bar, with any existing keyword selected so
+        typing replaces it."""
+        if not self.search_row.winfo_ismapped():
+            return  # setup / build screens have nothing to search yet
+        try:
+            self.search_entry.focus_set()
+            self.search_entry.select_range(0, tk.END)
+        except tk.TclError:
+            pass
 
     def refresh_source(self):
-        """Force a fresh rebuild from the current source (F5 / the Refresh button)."""
+        """Rebuild from the current source (F5 / the Refresh button).
+
+        With channels already indexed this runs behind the UI so browsing carries
+        on while the rebuild happens. The blocking build screen is only for the
+        case where there is nothing to browse yet.
+        """
         src = self.config.get("source")
-        if self.source_is_usable(src):
+        if not self.source_is_usable(src):
+            return
+        if self.catalog.total_channels() > 0:
+            self.refresh_catalog_in_background(src, include_vod=True)
+        else:
             self.show_build_screen(src, self.finish_startup)
 
     # -- playback ----------------------------------------------------------- #
@@ -491,6 +526,7 @@ class App(GroupsView, ChannelsView, SearchView, FavouritesView, FiltersView,
 
     # -- startup ------------------------------------------------------------ #
     def finish_startup(self, _=None):
+        self.show_search_row()
         self.init_epg()
         self.submit(self.catalog.ensure_indexes, None, None)  # enable fast "what's on" search
         total = self.catalog.total_channels()

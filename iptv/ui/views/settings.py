@@ -101,6 +101,7 @@ class SettingsView:
         fill in behind the UI) and everything at once for M3U sources.
         """
         self.new_view()
+        self.hide_search_row()  # nothing to search until the build finishes
         stype = source.get("type")
         if include_vod is None:
             include_vod = stype != "xtream"
@@ -193,21 +194,38 @@ class SettingsView:
         self.submit(work, done, build_gen)
 
     def refresh_catalog_in_background(self, source, include_vod=True):
-        """Refresh the catalog without blocking the current screen."""
+        """Refresh the catalog without blocking the current screen.
+
+        Only one rebuild runs at a time. They all write to the same temporary DB
+        and swap it into place at the end, so a second one started by an impatient
+        second press of Refresh would race the first.
+        """
+        if self.catalog_refreshing:
+            self.status_label.config(text="Refreshing channels… already running")
+            return
+        self.catalog_refreshing = True
+
         def work():
             def status(msg):
-                self.post(lambda m=msg: self.status_label.config(text=m))
+                self.post(lambda m=msg: self.status_label.config(text=f"Refreshing: {m}"))
 
             return self._build_catalog(source, status=status, include_vod=include_vod)
 
         def done(result):
+            # Delivered on the UI thread by the queue pump, so touch widgets directly.
+            self.catalog_refreshing = False
             kind, msg = result
-            if kind == "ok":
-                total = self.catalog.total_channels()
-                self.post(lambda: self.status_label.config(text=f"{total:,} channels indexed (refreshed)"))
-            else:
-                self.post(lambda: self.status_label.config(text="Catalog refresh failed"))
+            if kind != "ok":
+                self.status_label.config(text="Catalog refresh failed")
                 print(f"Catalog refresh failed: {msg}")
+                return
+            self.status_label.config(
+                text=f"{self.catalog.total_channels():,} channels indexed (refreshed)")
+            # Categories and their counts can have changed, so redraw the home
+            # screen if that is where the user is. Any other screen is left alone
+            # rather than yanked away mid-browse.
+            if self.view_gen == self.groups_gen:
+                self.show_groups()
 
         self.submit(work, done, None)
 
@@ -348,6 +366,7 @@ class SettingsView:
 
     def show_setup_screen(self):
         self.new_view()
+        self.hide_search_row()
         self.root.title("IPTV Stream Browser")
         self.subtitle_label.config(text="Welcome")
         self.clear_header()
